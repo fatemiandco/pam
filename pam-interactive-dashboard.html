@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAM — Interactive Task Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px 20px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-left h1 {
+      font-size: 2.5em;
+      margin-bottom: 5px;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #667eea;
+      border: 2px solid #667eea;
+    }
+
+    .btn-secondary:hover {
+      background: #f0f0f0;
+    }
+
+    .btn-danger {
+      background: #ff6b6b;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #ee5a52;
+    }
+
+    .btn-success {
+      background: #51cf66;
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #40c057;
+    }
+
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .control-row {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .form-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.95em;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .section h2 {
+      font-size: 1.4em;
+      border-bottom: 2px solid #667eea;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      color: #667eea;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 8px 16px;
+      border: 2px solid #ddd;
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .tasks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 15px;
+    }
+
+    .task-card {
+      background: #f9f9f9;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .task-card.urgent {
+      border-left-color: #ff6b6b;
+      background: #fff5f5;
+    }
+
+    .task-card.completed {
+      opacity: 0.6;
+      background: #f0f0f0;
+    }
+
+    .task-card:hover {
+      box-shadow: 0 4px 8px rgba(102, 126, 234, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .task-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+
+    .task-title {
+      font-weight: 600;
+      color: #333;
+      flex: 1;
+      cursor: pointer;
+      word-break: break-word;
+    }
+
+    .task-title:hover {
+      text-decoration: underline;
+      color: #667eea;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 5px;
+    }
+
+    .task-btn {
+      padding: 4px 8px;
+      font-size: 0.75em;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      color: white;
+    }
+
+    .task-btn-edit {
+      background: #667eea;
+    }
+
+    .task-btn-delete {
+      background: #ff6b6b;
+    }
+
+    .task-btn-complete {
+      background: #51cf66;
+    }
+
+    .task-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .task-category {
+      display: inline-block;
+      font-size: 0.75em;
+      background: #667eea;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .task-priority {
+      display: inline-block;
+      font-size: 0.75em;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .task-priority.high {
+      background: #ff6b6b;
+      color: white;
+    }
+
+    .task-priority.medium {
+      background: #ffa500;
+      color: white;
+    }
+
+    .task-priority.low {
+      background: #90ee90;
+      color: #333;
+    }
+
+    .task-description {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .modal-header {
+      font-size: 1.3em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #667eea;
+    }
+
+    .modal-close {
+      position: absolute;
+      right: 20px;
+      top: 20px;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: #999;
+    }
+
+    .modal-close:hover {
+      color: #333;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #999;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      border-left: 4px solid #667eea;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2em;
+      font-weight: 700;
+      color: #667eea;
+    }
+
+    .stat-label {
+      font-size: 0.85em;
+      color: #666;
+      margin-top: 5px;
+    }
+
+    footer {
+      text-align: center;
+      color: #999;
+      padding: 20px;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-left">
+        <h1>🤖 PAM</h1>
+        <p>Interactive Task Dashboard</p>
+      </div>
+      <div class="header-right">
+        <button class="btn-secondary" onclick="exportData()">Export</button>
+        <button class="btn-secondary" onclick="importData()">Import</button>
+        <button class="btn-danger" onclick="clearAll()">Clear All</button>
+      </div>
+    </header>
+
+    <!-- ADD TASK FORM -->
+    <div class="controls">
+      <h3 style="margin-bottom: 15px; color: #667eea;">Add New Task</h3>
+      <div class="control-row">
+        <div class="form-group">
+          <label>Task Title *</label>
+          <input type="text" id="taskTitle" placeholder="e.g., Fix PACCSE website gala date">
+        </div>
+        <div class="form-group">
+          <label>Category *</label>
+          <select id="taskCategory">
+            <option value="">Select Category</option>
+            <option value="PACCSE">PACCSE</option>
+            <option value="Le Faucheur">Le Faucheur</option>
+            <option value="Fatemi Stone">Fatemi Stone</option>
+            <option value="Fatemi & Co">Fatemi & Co</option>
+            <option value="Fatemi Digital">Fatemi Digital</option>
+            <option value="Personal">Personal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Priority</label>
+          <select id="taskPriority">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Time Horizon</label>
+          <select id="taskHorizon">
+            <option value="today">Today</option>
+            <option value="week" selected>This Week</option>
+            <option value="month">This Month</option>
+            <option value="backlog">Backlog</option>
+          </select>
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="taskDescription" placeholder="Add task details..."></textarea>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="addTask()" style="width: 100%; margin-top: 10px;">Add Task</button>
+    </div>
+
+    <!-- STATISTICS -->
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="totalTasks">0</div>
+        <div class="stat-label">Total Tasks</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="completedTasks">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="urgentTasks">0</div>
+        <div class="stat-label">Urgent</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="pendingTasks">0</div>
+        <div class="stat-label">Pending</div>
+      </div>
+    </div>
+
+    <!-- FILTER TABS -->
+    <div class="section">
+      <h3 style="margin-bottom: 10px; color: #667eea; font-size: 0.95em; font-weight: 600;">Filter by Time Horizon</h3>
+      <div class="filter-tabs">
+        <button class="tab-btn active" onclick="filterByHorizon('all')">All</button>
+        <button class="tab-btn" onclick="filterByHorizon('today')">Today</button>
+        <button class="tab-btn" onclick="filterByHorizon('week')">This Week</button>
+        <button class="tab-btn" onclick="filterByHorizon('month')">This Month</button>
+        <button class="tab-btn" onclick="filterByHorizon('backlog')">Backlog</button>
+      </div>
+
+      <h3 style="margin: 20px 0 10px 0; color: #667eea; font-size: 0.95em; font-weight: 600;">Filter by Category</h3>
+      <div class="filter-tabs" id="categoryFilters">
+        <button class="tab-btn active" onclick="filterByCategory('all')">All Categories</button>
+        <button class="tab-btn" onclick="filterByCategory('PACCSE')">PACCSE</button>
+        <button class="tab-btn" onclick="filterByCategory('Le Faucheur')">Le Faucheur</button>
+        <button class="tab-btn" onclick="filterByCategory('Fatemi Stone')">Fatemi Stone</button>
+        <button class="tab-btn" onclick="filterByCategory('Fatemi & Co')">Fatemi & Co</button>
+        <button class="tab-btn" onclick="filterByCategory('Fatemi Digital')">Fatemi Digital</button>
+        <button class="tab-btn" onclick="filterByCategory('Personal')">Personal</button>
+      </div>
+
+      <div id="tasksContainer" class="tasks-grid"></div>
+    </div>
+
+    <footer>
+      <p>PAM — Your intelligent personal assistant. Data saved locally in your browser.</p>
+    </footer>
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeEditModal()">&times;</span>
+      <div class="modal-header">Edit Task</div>
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="editTitle" placeholder="Task title">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="editDescription" placeholder="Task description"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="editCategory">
+          <option value="PACCSE">PACCSE</option>
+          <option value="Le Faucheur">Le Faucheur</option>
+          <option value="Fatemi Stone">Fatemi Stone</option>
+          <option value="Fatemi & Co">Fatemi & Co</option>
+          <option value="Fatemi Digital">Fatemi Digital</option>
+          <option value="Personal">Personal</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Priority</label>
+        <select id="editPriority">
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Time Horizon</label>
+        <select id="editHorizon">
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="backlog">Backlog</option>
+        </select>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentHorizonFilter = 'all';
+    let currentCategoryFilter = 'all';
+    let editingTaskId = null;
+    let tasks = JSON.parse(localStorage.getItem('pamTasks')) || [
+      {
+        id: 1,
+        title: "Buy Sonos speakers (bathroom + outside)",
+        category: "Le Faucheur",
+        priority: "high",
+        horizon: "week",
+        description: "Client experience priority. Research, purchase, delivery coordination. ~2-3 hrs. Mon/Tue target.",
+        completed: false,
+        createdAt: "2026-06-02T00:00:00Z"
+      },
+      {
+        id: 2,
+        title: "Draft and send VIP gala invitations (personalized, 3 tiers)",
+        category: "PACCSE",
+        priority: "high",
+        horizon: "week",
+        description: "Create personalized email invitations to 20 VIPs for Oct 8 inaugural gala. Three invitation tiers: (1) basic attendance, (2) sponsorship hint, (3) speaking opportunity. Waiting for full VIP list.",
+        completed: false,
+        createdAt: "2026-06-02T00:00:00Z"
+      },
+      {
+        id: 3,
+        title: "Send Heads of Terms email to Ben (MORE) — Lavagnoli deal",
+        category: "Fatemi Stone",
+        priority: "high",
+        horizon: "week",
+        description: "BLOCKING: Send Heads of Terms to Ben (MORE Surface Care) + Lavagnoli once Mariafrancesca (Lavagnoli lawyer) confirms Naval Sector addition. Email template ready. High-value deal — 10-year exclusive Italy + Naval Sector, 10% commission.",
+        completed: false,
+        createdAt: "2026-06-02T00:00:00Z"
+      },
+      {
+        id: 4,
+        title: "Lock PACCSE Phase 3 decisions (tagline, cross-promo, website fixes)",
+        category: "PACCSE",
+        priority: "high",
+        horizon: "today",
+        description: "Phase 3 content calendar build starts TODAY (June 1). Blocking items: (1) Pick tagline from 3 candidates, (2) Communicate cross-promotion ask to 10 board/committee members, (3) Confirm website fix sprint progress. Once locked, Andrea can build 17-week calendar.",
+        completed: false,
+        createdAt: "2026-06-02T00:00:00Z"
+      },
+      {
+        id: 5,
+        title: "Fix PACCSE website gala date errors (CRITICAL)",
+        category: "PACCSE",
+        priority: "high",
+        horizon: "today",
+        description: "Website shows May 21, 2026 (already passed) and 'Spring Gala' label. Correct date: October 8, 2026. /events page and /shop ticket. Blocks Phase 4 paid ad launch June 15.",
+        completed: false,
+        createdAt: "2026-06-02T00:00:00Z"
+      },
+      {
+        id: 6,
+        title: "Slab Search Phase 1 planning — decide priority suppliers",
+        category: "Fatemi Digital",
+        priority: "medium",
+        horizon: "week",
+        description: "Slab Search agent prototype built. Phase 1 (1-2 weeks): multi-step agent, structured result cards, ZIP-based sorting. Decision: Which 3 suppliers for first dedicated scrapers? MSI, Arizona Tile, Cosmos top candidates. Internal deployment or local-only?",
+        completed: false,
+        createdAt: "2026-06-02T00:00:00Z"
+      },
+      {
+        id: 7,
+        title: "Monitor M5 Mac mini preorder (June 8, WWDC announcement)",
+        category: "Personal",
+        priority: "high",
+        horizon: "month",
+        description: "URGENT: Apple M5 Mac mini announcement at WWDC June 8, 1 PM ET. Preorders open same day or Friday June 12. Will receive automated alert. Do NOT miss the preorder window — popular configs sell out within hours.",
+        completed: false,
+        createdAt: "2026-06-02T00:00:00Z"
+      }
+    ];
+
+    function addTask() {
+      const title = document.getElementById('taskTitle').value.trim();
+      const category = document.getElementById('taskCategory').value;
+      const priority = document.getElementById('taskPriority').value;
+      const horizon = document.getElementById('taskHorizon').value;
+      const description = document.getElementById('taskDescription').value.trim();
+
+      if (!title || !category) {
+        alert('Please fill in title and category');
+        return;
+      }
+
+      const task = {
+        id: Date.now(),
+        title,
+        category,
+        priority,
+        horizon,
+        description,
+        completed: false,
+        createdAt: new Date().toISOString()
+      };
+
+      tasks.push(task);
+      saveTasks();
+      renderTasks();
+      clearForm();
+    }
+
+    function clearForm() {
+      document.getElementById('taskTitle').value = '';
+      document.getElementById('taskCategory').value = '';
+      document.getElementById('taskPriority').value = 'medium';
+      document.getElementById('taskHorizon').value = 'week';
+      document.getElementById('taskDescription').value = '';
+    }
+
+    function deleteTask(id) {
+      if (confirm('Delete this task?')) {
+        tasks = tasks.filter(t => t.id !== id);
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    function toggleComplete(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        task.completed = !task.completed;
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    function openEditModal(id) {
+      editingTaskId = id;
+      const task = tasks.find(t => t.id === id);
+      if (task) {
+        document.getElementById('editTitle').value = task.title;
+        document.getElementById('editDescription').value = task.description;
+        document.getElementById('editCategory').value = task.category;
+        document.getElementById('editPriority').value = task.priority;
+        document.getElementById('editHorizon').value = task.horizon;
+        document.getElementById('editModal').classList.add('active');
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('active');
+      editingTaskId = null;
+    }
+
+    function saveEdit() {
+      if (!editingTaskId) return;
+      const task = tasks.find(t => t.id === editingTaskId);
+      if (task) {
+        task.title = document.getElementById('editTitle').value.trim();
+        task.description = document.getElementById('editDescription').value.trim();
+        task.category = document.getElementById('editCategory').value;
+        task.priority = document.getElementById('editPriority').value;
+        task.horizon = document.getElementById('editHorizon').value;
+        saveTasks();
+        renderTasks();
+        closeEditModal();
+      }
+    }
+
+    function filterByHorizon(horizon) {
+      currentHorizonFilter = horizon;
+      // Update horizon filter buttons
+      const horizonButtons = document.querySelectorAll('.filter-tabs')[0].querySelectorAll('.tab-btn');
+      horizonButtons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderTasks();
+    }
+
+    function filterByCategory(category) {
+      currentCategoryFilter = category;
+      // Update category filter buttons
+      const categoryButtons = document.getElementById('categoryFilters').querySelectorAll('.tab-btn');
+      categoryButtons.forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderTasks();
+    }
+
+    function renderTasks() {
+      const container = document.getElementById('tasksContainer');
+      let filtered = tasks;
+
+      // Apply horizon filter
+      if (currentHorizonFilter !== 'all') {
+        filtered = filtered.filter(t => t.horizon === currentHorizonFilter);
+      }
+
+      // Apply category filter
+      if (currentCategoryFilter !== 'all') {
+        filtered = filtered.filter(t => t.category === currentCategoryFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="empty-state"><p>No tasks</p></div>';
+      } else {
+        container.innerHTML = filtered.map(task => `
+          <div class="task-card ${task.priority === 'high' ? 'urgent' : ''} ${task.completed ? 'completed' : ''}">
+            <div class="task-header">
+              <div class="task-title" onclick="openEditModal(${task.id})">${task.title}</div>
+              <div class="task-actions">
+                <button class="task-btn task-btn-complete" onclick="toggleComplete(${task.id})">${task.completed ? '↻' : '✓'}</button>
+                <button class="task-btn task-btn-edit" onclick="openEditModal(${task.id})">✎</button>
+                <button class="task-btn task-btn-delete" onclick="deleteTask(${task.id})">✕</button>
+              </div>
+            </div>
+            ${task.description ? `<div class="task-description">${task.description}</div>` : ''}
+            <div class="task-meta">
+              <span class="task-category">${task.category}</span>
+              <span class="task-priority ${task.priority}">${task.priority.toUpperCase()}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      updateStats();
+    }
+
+    function updateStats() {
+      document.getElementById('totalTasks').textContent = tasks.length;
+      document.getElementById('completedTasks').textContent = tasks.filter(t => t.completed).length;
+      document.getElementById('urgentTasks').textContent = tasks.filter(t => t.priority === 'high' && !t.completed).length;
+      document.getElementById('pendingTasks').textContent = tasks.filter(t => !t.completed).length;
+    }
+
+    function saveTasks() {
+      localStorage.setItem('pamTasks', JSON.stringify(tasks));
+    }
+
+    function exportData() {
+      const data = JSON.stringify(tasks, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `pam-tasks-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const imported = JSON.parse(event.target.result);
+            if (confirm('Replace all tasks with imported data?')) {
+              tasks = imported;
+              saveTasks();
+              renderTasks();
+            }
+          } catch (error) {
+            alert('Invalid file format');
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    function clearAll() {
+      if (confirm('Delete ALL tasks? This cannot be undone.')) {
+        tasks = [];
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    // Initialize
+    renderTasks();
+  </script>
+</body>
+</html>
