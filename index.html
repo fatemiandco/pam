@@ -116,6 +116,15 @@
       </div>
     </div>
 
+    <div class="section" id="zohoSection" style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #667eea;">
+      <h3 style="color: #667eea; margin-bottom: 12px;">🔄 Zoho Projects Sync</h3>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+        <button id="zohoAuthBtn" class="btn-primary" style="width: auto; padding: 10px 16px;" onclick="startZohoAuth()">Connect Zoho Projects</button>
+        <button id="zohoSyncBtn" class="btn-secondary" style="display: none;" onclick="syncZohoTasks()">🔄 Sync Now</button>
+        <span id="zohoStatus" style="font-size: 0.9em; color: #667eea;"></span>
+      </div>
+    </div>
+
     <div class="section">
       <h2>➕ Add New Task</h2>
       <div class="add-task-form">
@@ -382,8 +391,157 @@
       if (confirm('Delete all tasks? This cannot be undone.')) { tasks = []; saveTasks(); renderTasks(); }
     }
 
+    // ===== ZOHO PROJECTS INTEGRATION =====
+    const ZOHO_CLIENT_ID = '1000.SKE0C4R2XJQPLS0QECU8O7AN5VX91J';
+    const ZOHO_CLIENT_SECRET = 'e75f5f8803daa8faa0dafe8ec70f72c94e546b1a6c';
+    const ZOHO_REDIRECT_URI = 'https://fatemiandco.github.io/pam/';
+    const ZOHO_AUTH_URL = 'https://accounts.zoho.com/oauth/v2/auth';
+    const ZOHO_TOKEN_URL = 'https://accounts.zoho.com/oauth/v2/token';
+    const ZOHO_API_BASE = 'https://projectsapi.zoho.com/restapi/v2';
+
+    function getZohoAuthCode() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('code');
+    }
+
+    function getStoredZohoToken() {
+      return localStorage.getItem('zohoAccessToken');
+    }
+
+    function startZohoAuth() {
+      const scope = 'ZohoProjects.projects.READ ZohoProjects.tasks.READ';
+      const state = Math.random().toString(36).substring(7);
+      localStorage.setItem('zohoAuthState', state);
+      const authUrl = `${ZOHO_AUTH_URL}?client_id=${ZOHO_CLIENT_ID}&response_type=code&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(ZOHO_REDIRECT_URI)}&state=${state}`;
+      window.location.href = authUrl;
+    }
+
+    async function exchangeAuthCodeForToken(code) {
+      const params = new URLSearchParams({
+        code,
+        client_id: ZOHO_CLIENT_ID,
+        client_secret: ZOHO_CLIENT_SECRET,
+        redirect_uri: ZOHO_REDIRECT_URI,
+        grant_type: 'authorization_code'
+      });
+
+      try {
+        const response = await fetch(ZOHO_TOKEN_URL, {
+          method: 'POST',
+          body: params,
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+        const data = await response.json();
+        if (data.access_token) {
+          localStorage.setItem('zohoAccessToken', data.access_token);
+          if (data.refresh_token) localStorage.setItem('zohoRefreshToken', data.refresh_token);
+          document.getElementById('zohoStatus').textContent = '✓ Connected to Zoho';
+          document.getElementById('zohoAuthBtn').style.display = 'none';
+          document.getElementById('zohoSyncBtn').style.display = 'inline-block';
+          window.history.replaceState({}, document.title, ZOHO_REDIRECT_URI);
+          await syncZohoTasks();
+          return true;
+        }
+      } catch (err) {
+        console.error('Token exchange failed:', err);
+        document.getElementById('zohoStatus').textContent = '✗ Auth failed';
+      }
+      return false;
+    }
+
+    async function syncZohoTasks() {
+      const token = getStoredZohoToken();
+      if (!token) {
+        alert('Please connect Zoho Projects first');
+        return;
+      }
+
+      document.getElementById('zohoStatus').textContent = '⟳ Syncing...';
+      try {
+        // Fetch projects to find PACCSE Marketing
+        const projectsRes = await fetch(`${ZOHO_API_BASE}/projects`, {
+          headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
+        });
+        const projectsData = await projectsRes.json();
+
+        let paccseProjectId = null;
+        if (projectsData.projects) {
+          const paccseProj = projectsData.projects.find(p => p.name && p.name.includes('PACCSE'));
+          if (paccseProj) paccseProjectId = paccseProj.id;
+        }
+
+        if (!paccseProjectId) {
+          document.getElementById('zohoStatus').textContent = '✓ Synced (no PACCSE project found)';
+          return;
+        }
+
+        // Fetch tasks from PACCSE Marketing project
+        const tasksRes = await fetch(`${ZOHO_API_BASE}/projects/${paccseProjectId}/tasks`, {
+          headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
+        });
+        const tasksData = await tasksRes.json();
+
+        if (tasksData.tasks && Array.isArray(tasksData.tasks)) {
+          // Map Zoho tasks to PAM format
+          tasksData.tasks.forEach(zohoTask => {
+            const existingTask = tasks.find(t => t.zohoId === zohoTask.id);
+            if (existingTask) {
+              // Update existing task with Zoho status
+              existingTask.completed = zohoTask.status === 'closed' || zohoTask.status === 'completed';
+            } else {
+              // Add new task from Zoho
+              const newTask = {
+                id: Math.max(...tasks.map(t => t.id), 0) + 1,
+                zohoId: zohoTask.id,
+                title: zohoTask.name || zohoTask.title,
+                category: 'PACCSE',
+                priority: zohoTask.priority ? zohoTask.priority.toLowerCase() : 'medium',
+                horizon: 'month',
+                description: `From Zoho: ${zohoTask.description || ''}`,
+                completed: zohoTask.status === 'closed' || zohoTask.status === 'completed',
+                createdAt: new Date().toISOString(),
+                zohoStatus: zohoTask.status
+              };
+              tasks.push(newTask);
+            }
+          });
+
+          saveTasks();
+          renderTasks();
+          document.getElementById('zohoStatus').textContent = `✓ Synced ${tasksData.tasks.length} tasks`;
+        }
+      } catch (err) {
+        console.error('Sync failed:', err);
+        document.getElementById('zohoStatus').textContent = '✗ Sync failed';
+      }
+    }
+
+    // Check for OAuth callback
+    function initZohoAuth() {
+      const code = getAuthCode();
+      const token = getStoredZohoToken();
+
+      if (token) {
+        // Already authenticated
+        document.getElementById('zohoAuthBtn').style.display = 'none';
+        document.getElementById('zohoSyncBtn').style.display = 'inline-block';
+        document.getElementById('zohoStatus').textContent = '✓ Connected to Zoho';
+      } else if (code) {
+        // Handle OAuth callback
+        exchangeAuthCodeForToken(code);
+      } else {
+        document.getElementById('zohoStatus').textContent = 'Not connected';
+      }
+    }
+
+    function getAuthCode() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('code');
+    }
+
     loadTasks();
     renderTasks();
+    initZohoAuth();
   </script>
 </body>
 </html>
