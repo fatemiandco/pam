@@ -1,0 +1,18 @@
+[build]
+  command = "echo 'Deploying PAM with Netlify Functions'"
+    functions = "netlify/functions"
+      publish = "."
+
+      [functions]
+        node_bundler = "esbuild"
+
+        [[redirects]]
+          from = "/api/*"
+            to = "/.netlify/functions/:splat"
+              status = 200
+
+              # Direct function path
+              [[redirects]]
+                from = "/.netlify/functions/:name"
+                  to = "/.netlify/functions/:name"
+                    status = 200
