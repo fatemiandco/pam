@@ -459,7 +459,7 @@
       document.getElementById('zohoStatus').textContent = '⟳ Syncing...';
       try {
         // Fetch projects to find PACCSE Marketing
-        const projectsRes = await fetch(`${ZOHO_API_BASE}/projects`, {
+        const projectsRes = await fetch(`https://cors-anywhere.herokuapp.com/${ZOHO_API_BASE}/projects`, {
           headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
         });
         const projectsData = await projectsRes.json();
@@ -476,7 +476,7 @@
         }
 
         // Fetch tasks from PACCSE Marketing project
-        const tasksRes = await fetch(`${ZOHO_API_BASE}/projects/${paccseProjectId}/tasks`, {
+        const tasksRes = await fetch(`https://cors-anywhere.herokuapp.com/${ZOHO_API_BASE}/projects/${paccseProjectId}/tasks`, {
           headers: { 'Authorization': `Zoho-oauthtoken ${token}` }
         });
         const tasksData = await tasksRes.json();
