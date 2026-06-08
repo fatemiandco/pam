@@ -1,5 +1,5 @@
 [build]
-  command = "echo 'Deploying PAM with Netlify Functions'"
+  command = "true"
     functions = "netlify/functions"
       publish = "."
 
